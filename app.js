@@ -141,6 +141,21 @@ app.put('/users/preferences', authMiddleware, (req, res) => {
     return res.status(200).json({ preferences: req.user.preferences });
 });
 
+// GET /preferences - same as /users/preferences
+app.get('/preferences', authMiddleware, (req, res) => {
+    return res.status(200).json({ preferences: req.user.preferences || [] });
+});
+
+// PUT /preferences - same as /users/preferences
+app.put('/preferences', authMiddleware, (req, res) => {
+    const { preferences } = req.body || {};
+    if (!Array.isArray(preferences)) {
+        return res.status(400).json({ error: 'Preferences must be an array' });
+    }
+    req.user.preferences = preferences;
+    return res.status(200).json({ preferences: req.user.preferences });
+});
+
 // GET /news - protected, returns dummy news list
 app.get('/news', authMiddleware, (req, res) => {
     const news = [
