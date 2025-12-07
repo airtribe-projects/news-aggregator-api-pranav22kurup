@@ -58,10 +58,12 @@ Invoke-WebRequest -Uri http://localhost:3000/users/signup -Method POST \
 
 Login (capture token):
 ```powershell
-$login = Invoke-RestMethod -Uri http://localhost:3000/users/login -Method POST \
-	-ContentType 'application/json' \
-	-Body '{"email":"clark@superman.com","password":"Krypt()n8"}';
-$token = $login.token; $token
+$login = Invoke-RestMethod -Uri http://localhost:3000/users/login -Method POST `
+  -ContentType 'application/json' `
+  -Body '{"email":"clark@superman.com","password":"Krypt()n8"}'
+
+$token = $login.token
+$token
 ```
 
 Get preferences:
@@ -71,16 +73,26 @@ Invoke-RestMethod -Uri http://localhost:3000/preferences -Headers @{ Authorizati
 
 Update preferences:
 ```powershell
-Invoke-RestMethod -Uri http://localhost:3000/preferences -Method PUT \
-	-Headers @{ Authorization = "Bearer $token" } \
-	-ContentType 'application/json' \
-	-Body '{"preferences":["movies","comics","games"]}'
+Invoke-RestMethod -Uri http://localhost:3000/preferences -Method PUT `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType 'application/json' `
+  -Body '{"preferences":["movies","comics","games"]}'
+```
+
+Verify:
+```powershell
+Invoke-RestMethod -Uri http://localhost:3000/preferences `
+  -Headers @{ Authorization = "Bearer $token" }
 ```
 
 Get news:
 ```powershell
 Invoke-RestMethod -Uri http://localhost:3000/news -Headers @{ Authorization = "Bearer $token" }
 ```
+Postman test tips:
+
+Authorization: set Bearer Token to the JWT from /users/login.
+Environment variable: NEWS_API_KEY can be set in Postman’s environment if you run the server without embedding the default key.
 
 ## Notes
 - User data is stored in-memory for development and tests; it resets on server restart.

@@ -4,6 +4,8 @@ const port = 3000;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret';
+const axios = require('axios');
+const NEWS_API_KEY = process.env.NEWS_API_KEY || '8b3f92f519a24dabb5147a469b6cf98d';
 
 // Simple in-memory users store for this exercise
 const users = [];
@@ -156,13 +158,53 @@ app.put('/preferences', authMiddleware, (req, res) => {
     return res.status(200).json({ preferences: req.user.preferences });
 });
 
-// GET /news - protected, returns dummy news list
-app.get('/news', authMiddleware, (req, res) => {
-    const news = [
-        { title: 'Breaking: Sample News Item', category: 'general' },
-        { title: 'Movies Update', category: 'movies' }
-    ];
-    return res.status(200).json({ news });
+// GET /news - protected, fetch news from external API based on user preferences
+app.get('/news', authMiddleware, async (req, res) => {
+    try {
+        const prefs = Array.isArray(req.user.preferences) ? req.user.preferences : [];
+
+        // Map preferences to NewsAPI query parameters
+        // We'll treat preferences as categories or keywords
+        const keywords = prefs.length ? prefs.join(' OR ') : 'general';
+
+        // Example using NewsAPI.org's /v2/everything endpoint
+        // Docs: https://newsapi.org/docs/endpoints/everything
+        const url = 'https://newsapi.org/v2/everything';
+        const params = {
+            q: keywords,
+            language: 'en',
+            sortBy: 'publishedAt',
+            pageSize: 20
+        };
+
+        const headers = { 'X-Api-Key': NEWS_API_KEY };
+        const response = await axios.get(url, { params, headers });
+
+        if (!response.data || !Array.isArray(response.data.articles)) {
+            return res.status(502).json({ error: 'Invalid response from news service' });
+        }
+
+        const articles = response.data.articles.map(a => ({
+            title: a.title,
+            description: a.description,
+            url: a.url,
+            source: a.source?.name,
+            publishedAt: a.publishedAt
+        }));
+
+        return res.status(200).json({ news: articles });
+    } catch (err) {
+        // Handle common errors (network, 4xx/5xx from NewsAPI)
+        if (err.response) {
+            const status = err.response.status;
+            const msg = err.response.data?.message || 'News API error';
+            if (status === 401 || status === 403) {
+                return res.status(502).json({ error: 'Invalid or unauthorized News API key' });
+            }
+            return res.status(502).json({ error: msg });
+        }
+        return res.status(500).json({ error: 'Failed to fetch news' });
+    }
 });
 
 app.listen(port, (err) => {
